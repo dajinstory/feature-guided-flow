@@ -1,0 +1,1 @@
+python src/train.py --config config/kdflow_64x64_v0.yml
