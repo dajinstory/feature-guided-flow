@@ -55,8 +55,8 @@ ckpt_path = args.ckpt_path if args.resume else None
 ## Callback - Checkpoint
 checkpoint_callback_loss = ModelCheckpoint(
     dirpath=args.save_path,
-    filename='best-epoch{epoch:02d}-nll{val/loss:.4f}',
-    monitor='val/loss',
+    filename='best-epoch{epoch:02d}-loss{val/metric/loss:.4f}',
+    monitor='val/metric/loss',
     save_last=True,
     save_top_k=3,
     mode='min',
