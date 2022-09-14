@@ -58,7 +58,7 @@ MODEL:
   type: "LitKDFlowV1"
   in_size: 64
   gt_size: 64
-  n_bits: 8
+  n_bits: 3
   pretrained: #/data/dajinhan/models/
   
   flow_net:
@@ -71,7 +71,7 @@ MODEL:
       type: NLLLoss
       args:
         weight: 1.0
-        n_bits: 8
+        n_bits: 3
     feature_guide:
       type: MSELoss
       args:
