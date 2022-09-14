@@ -62,6 +62,8 @@ class LitKDFlowV0(LitBaseModel):
 
         self.norm_mean = [0.5, 0.5, 0.5]
         self.norm_std = [1.0, 1.0, 1.0] #[0.5, 0.5, 0.5]
+        # self.norm_mean = [0.485, 0.456, 0.406]
+        # self.norm_std = [0.229, 0.224, 0.225]
                 
         self.preprocess = transforms.Normalize(
             mean=self.norm_mean, 
@@ -121,10 +123,10 @@ class LitKDFlowV0(LitBaseModel):
         # Loss
         losses = dict()
         losses['loss_nll'], log_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
-        losses['loss_fg0'], log_fg0 = self.loss_fg(inter_features[0], vgg_features[0])
-        losses['loss_fg1'], log_fg1 = self.loss_fg(inter_features[1], vgg_features[1])
-        losses['loss_fg2'], log_fg2 = self.loss_fg(inter_features[2], vgg_features[2])
-        losses['loss_fg3'], log_fg3 = self.loss_fg(inter_features[3], vgg_features[3])
+        losses['loss_fg0'], log_fg0 = self.loss_fg(inter_features[0], vgg_features[0], weight=self.loss_fg_weights[0])
+        losses['loss_fg1'], log_fg1 = self.loss_fg(inter_features[1], vgg_features[1], weight=self.loss_fg_weights[1])
+        losses['loss_fg2'], log_fg2 = self.loss_fg(inter_features[2], vgg_features[2], weight=self.loss_fg_weights[2])
+        losses['loss_fg3'], log_fg3 = self.loss_fg(inter_features[3], vgg_features[3], weight=self.loss_fg_weights[3])
         loss_total_common = sum(losses.values())
         
         log_train = {
@@ -142,7 +144,6 @@ class LitKDFlowV0(LitBaseModel):
         # Total Loss
         return loss_total_common
 
-
     def validation_step(self, batch, batch_idx):
         im, conditions, vgg_features = self.preprocess_batch(batch)
 
@@ -151,55 +152,70 @@ class LitKDFlowV0(LitBaseModel):
         inter_features = [ vgg_header(inter_feature) for vgg_header, inter_feature in zip(self.vgg_headers, inter_features) ]
 
         # Reverse - Latent to Image
+        w_rand = torch.randn_like(w)
+        w_rand_temp = w_rand * 0.7
         splits_random = [torch.randn_like(split) for split in splits[:-1]] + [None]
+        splits_random_temp = [0.7*split for split in splits_random[:-1]] + [None]
+
         im_recs = self.flow_net.reverse(w, conditions, splits=splits)
         im_recr = self.flow_net.reverse(w, conditions, splits=splits_random)
-        im_gen = self.flow_net.reverse(torch.randn_like(w), conditions, splits=splits_random)
+        im_recr_temp = self.flow_net.reverse(w, conditions, splits=splits_random_temp)
+        im_gen = self.flow_net.reverse(w_rand, conditions, splits=splits_random)
+        im_gen_temp = self.flow_net.reverse(w_rand_temp, conditions, splits=splits_random_temp)
         
         # Format - range (0~1)
         im = torch.clamp(self.reverse_preprocess(im), 0, 1)
         im_recs = torch.clamp(self.reverse_preprocess(im_recs), 0, 1)
         im_recr = torch.clamp(self.reverse_preprocess(im_recr), 0, 1)
+        im_recr_temp = torch.clamp(self.reverse_preprocess(im_recr_temp), 0, 1)
         im_gen = torch.clamp(self.reverse_preprocess(im_gen), 0, 1)
+        im_gen_temp = torch.clamp(self.reverse_preprocess(im_gen_temp), 0, 1)
         
         # Metric - Image, CHW
         if batch_idx < 10:
             self.sampled_images.append(im[0].cpu())
             self.sampled_images.append(im_recs[0].cpu())
             self.sampled_images.append(im_recr[0].cpu())
+            self.sampled_images.append(im_recr_temp[0].cpu())
             self.sampled_images.append(im_gen[0].cpu())
+            self.sampled_images.append(im_gen_temp[0].cpu())
             
         # Metric - PSNR, SSIM
         im = im[0].cpu().numpy().transpose(1,2,0)
         im_recs = im_recs[0].cpu().numpy().transpose(1,2,0)
         im_recr = im_recr[0].cpu().numpy().transpose(1,2,0)
+        im_recr_temp = im_recr_temp[0].cpu().numpy().transpose(1,2,0)
         im_gen = im_gen[0].cpu().numpy().transpose(1,2,0)
         metric_psnr_r = PSNR(im_recr*255, im*255) 
         metric_ssim_r = SSIM(im_recr*255, im*255)
+        metric_psnr_r_temp = PSNR(im_recr_temp*255, im*255) 
+        metric_ssim_r_temp = SSIM(im_recr_temp*255, im*255)
 
         # Metric - Objective Functions
         loss_nll, metric_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
-        loss_fg0, metric_fg0 = self.loss_fg(inter_features[0], vgg_features[0])
-        loss_fg1, metric_fg1 = self.loss_fg(inter_features[1], vgg_features[1])
-        loss_fg2, metric_fg2 = self.loss_fg(inter_features[2], vgg_features[2])
-        loss_fg3, metric_fg3 = self.loss_fg(inter_features[3], vgg_features[3])
-        metric_fg = metric_fg0*0.5 + metric_fg1*2 + metric_fg2*8 + metric_fg3*3
+        loss_fg0, metric_fg0 = self.loss_fg(inter_features[0], vgg_features[0], weight=self.loss_fg_weights[0])
+        loss_fg1, metric_fg1 = self.loss_fg(inter_features[1], vgg_features[1], weight=self.loss_fg_weights[1])
+        loss_fg2, metric_fg2 = self.loss_fg(inter_features[2], vgg_features[2], weight=self.loss_fg_weights[2])
+        loss_fg3, metric_fg3 = self.loss_fg(inter_features[3], vgg_features[3], weight=self.loss_fg_weights[3])
         loss_fg = loss_fg0 + loss_fg1 + loss_fg2 + loss_fg3
+        metric_fg = loss_fg / self.loss_fg.weight
         loss_val = loss_nll + loss_fg
 
         log_valid = {
-            'val/loss': loss_val,
+            'val/metric/loss': loss_val,
             'val/metric/nll': metric_nll,
-            'val/metric/metric_fg': metric_fg,
+            'val/metric/fg': metric_fg,
             'val/metric/psnr_r': metric_psnr_r,
-            'val/metric/ssim_r': metric_ssim_r}
+            'val/metric/ssim_r': metric_ssim_r,
+            'val/metric/psnr_r_temp': metric_psnr_r_temp,
+            'val/metric/ssim_r_temp': metric_ssim_r_temp,}
         self.log_dict(log_valid)
 
     def test_step(self, batch, batch_idx):
         self.validation_step(batch, batch_idx)
 
     def validation_epoch_end(self, outputs):
-        grid = make_grid(self.sampled_images, nrow=4)
+        grid = make_grid(self.sampled_images, nrow=6)
         if isinstance(self.logger, TensorBoardLogger):
             self.logger.experiment.add_image(
                 f'val/visualization',
@@ -222,7 +238,7 @@ class LitKDFlowV0(LitBaseModel):
                 optimizer, 
                 T_max=self.opt['scheduler']['T_max'], 
                 eta_min=self.opt['scheduler']['eta_min']),
-            'name': 'learning_rate_g'}
+            'name': 'learning_rate'}
         
 
         return [optimizer], [scheduler]
@@ -240,4 +256,5 @@ class LitKDFlowV0(LitBaseModel):
         
         self.loss_nll = losses[opt['nll']['type']](**opt['nll']['args'])
         self.loss_fg = losses[opt['feature_guide']['type']](**opt['feature_guide']['args'])
+        self.loss_fg_weights = [1.0, 1.0, 1.0, 1.0]
        
