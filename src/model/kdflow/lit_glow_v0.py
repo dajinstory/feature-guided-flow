@@ -164,6 +164,7 @@ class LitGlowV0(LitBaseModel):
         loss_nll, metric_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
 
         log_valid = {
+            'val/metric/loss': loss_nll,
             'val/metric/nll': metric_nll,
             'val/metric/psnr_r': metric_psnr_r,
             'val/metric/ssim_r': metric_ssim_r,
