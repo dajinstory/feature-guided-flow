@@ -82,7 +82,6 @@ class LitKDFlowV0(LitBaseModel):
         self.sampled_images = []
         
         # log
-        self.epoch = 0
         self.save_hyperparameters(ignore=[])
 
         # pretrained
@@ -228,10 +227,9 @@ class LitKDFlowV0(LitBaseModel):
                 f'val/visualization',
                 grid, self.global_step+1, dataformats='CHW')
         self.sampled_images = []
-
+        
         # Update hyper-params if necessary
-        self.epoch += 1
-        if self.epoch % 10 == 0:
+        if self.current_epoch % 10 == 0:
             self.n_bits = min(self.n_bits+1, 8)
             self.n_bins = 2.0**self.n_bits
             self.loss_nll.n_bits = self.n_bits
