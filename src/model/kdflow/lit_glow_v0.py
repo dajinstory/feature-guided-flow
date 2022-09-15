@@ -176,12 +176,21 @@ class LitGlowV0(LitBaseModel):
         self.validation_step(batch, batch_idx)
 
     def validation_epoch_end(self, outputs):
+        # Log Qualative Result - Image
         grid = make_grid(self.sampled_images, nrow=6)
         if isinstance(self.logger, TensorBoardLogger):
             self.logger.experiment.add_image(
                 f'val/visualization',
                 grid, self.global_step+1, dataformats='CHW')
         self.sampled_images = []
+
+        # Update hyper-params if necessary
+        self.epoch += 1
+        if self.epoch % 10 == 0:
+            self.n_bits = min(self.n_bits+1, 8)
+            self.n_bins = 2.0**self.n_bits
+            self.loss_nll.n_bits = self.n_bits
+            self.loss_nll.n_bins = self.n_bins
 
     def test_epoch_end(self, outputs):
         pass
