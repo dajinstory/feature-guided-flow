@@ -68,6 +68,7 @@ class LitGlowV0(LitBaseModel):
         self.sampled_images = []
         
         # log
+        self.epoch = 0
         self.save_hyperparameters(ignore=[])
 
         # pretrained
