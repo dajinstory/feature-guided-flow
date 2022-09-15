@@ -14,6 +14,7 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 from ..common.lit_basemodel import LitBaseModel
 from .glow_64x64_v0 import Glow64x64V0
+from .glow_64x64_v1 import Glow64x64V1
 from .glow_256x256_v0 import Glow256x256V0
 from loss import NLLLoss, TripletLoss, MSELoss, L1Loss, PerceptualLoss, IDLoss, GANLoss
 from metric import L1, PSNR, SSIM
@@ -38,11 +39,15 @@ class LitGlowV0(LitBaseModel):
         # network
         flow_nets = {
             'Glow64x64V0': Glow64x64V0,
+            'Glow64x64V1': Glow64x64V1,
             'Glow256x256V0': Glow256x256V0,
         }
 
         self.opt = opt
         self.flow_net = flow_nets[opt['flow_net']['type']](**opt['flow_net']['args'])
+        self.in_size = self.opt['in_size']
+        self.n_bits = self.opt['n_bits']
+        self.n_bins = 2.0**self.n_bits
 
         self.norm_mean = [0.5, 0.5, 0.5]
         self.norm_std = [1.0, 1.0, 1.0] #[0.5, 0.5, 0.5]
@@ -55,10 +60,6 @@ class LitGlowV0(LitBaseModel):
         self.reverse_preprocess = transforms.Normalize(
             mean=[-m/s for m,s in zip(self.norm_mean, self.norm_std)],
             std=[1/s for s in self.norm_std])
-        
-        self.in_size = self.opt['in_size']
-        self.n_bits = self.opt['n_bits']
-        self.n_bins = 2.0**self.n_bits
 
         # loss
         self._create_loss(opt['loss'])
@@ -85,7 +86,7 @@ class LitGlowV0(LitBaseModel):
         im = im / self.n_bins
         im = self.preprocess(im)
         
-        conditions = [None] * len(self.flow_net.blocks)
+        conditions = [None] * (len(self.flow_net.blocks) + len(self.flow_net.headers))
 
         return im, conditions
 
@@ -95,7 +96,7 @@ class LitGlowV0(LitBaseModel):
         # Forward
         # quant_randomness = torch.zeros_like(im)
         quant_randomness = self.preprocess(torch.rand_like(im)/self.n_bins) - self.preprocess(torch.zeros_like(im)) # x = (0~1)/n_bins, \ (im-m)/s + (x-m)/s - (0-m)/s = (im+x-m)/s
-        w, log_p, log_det, _ = self.flow_net.forward(im + quant_randomness, conditions)
+        w, log_p, log_det, _, _ = self.flow_net.forward(im + quant_randomness, conditions)
         
         # Loss
         losses = dict()
@@ -117,13 +118,13 @@ class LitGlowV0(LitBaseModel):
         im, conditions = self.preprocess_batch(batch)
 
         # Forward
-        w, log_p, log_det, splits = self.flow_net.forward(im, conditions)
+        w, log_p, log_det, splits, _ = self.flow_net.forward(im, conditions)
 
         # Reverse - Latent to Image
         w_rand = torch.randn_like(w)
         w_rand_temp = w_rand * 0.7
-        splits_random = [torch.randn_like(split) for split in splits[:-1]] + [None]
-        splits_random_temp = [0.7*split for split in splits_random[:-1]] + [None]
+        splits_random = [torch.randn_like(split) if split is not None else None for split in splits]
+        splits_random_temp = [0.7*split if split is not None else None for split in splits_random]
 
         im_recs = self.flow_net.reverse(w, conditions, splits=splits)
         im_recr = self.flow_net.reverse(w, conditions, splits=splits_random)
@@ -198,7 +199,6 @@ class LitGlowV0(LitBaseModel):
                 T_max=self.opt['scheduler']['T_max'], 
                 eta_min=self.opt['scheduler']['eta_min']),
             'name': 'learning_rate'}
-        
 
         return [optimizer], [scheduler]
     

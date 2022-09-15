@@ -15,7 +15,8 @@ def sub_conv(ch_hidden, kernel):
                                     nn.ReLU(),
                                     nn.Conv2d(ch_hidden, ch_hidden, kernel_center, padding=pad_center),
                                     nn.ReLU(),
-                                    nn.Conv2d(ch_hidden, ch_out, kernel, padding=pad),)
+                                    # nn.Conv2d(ch_hidden, ch_out, kernel, padding=pad),
+                                    ZeroConv2d(ch_hidden, ch_out),)
 
 class Glow64x64V0(nn.Module):
     def __init__(self, pretrained=None):
@@ -42,6 +43,7 @@ class Glow64x64V0(nn.Module):
                   flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=96, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
                   split=False),
         )
+        self.headers = nn.Sequential()
 
         # checkpoint
         if pretrained is not None:
@@ -65,7 +67,7 @@ class Glow64x64V0(nn.Module):
         log_det = 0  
         splits = []
         inter_features = []
-        
+
         # Blocks (3,64,64) -> (96,4,4)
         for block, condition in zip(self.blocks, conditions[:len(self.blocks)]):
             output, _log_det, _split = block(output, condition)
@@ -80,6 +82,7 @@ class Glow64x64V0(nn.Module):
                 _log_sd = torch.ones_like(split) * log(self.inter_temp)
                 _log_p = gaussian_log_p(split, _m, _log_sd)
                 log_p += _log_p.sum(1)
+
         w = output
             
         # Calculate log_p for final Z
@@ -91,7 +94,7 @@ class Glow64x64V0(nn.Module):
           
         return w, log_p, log_det, splits, inter_features
 
-    def reverse(self, w, conditions, splits=None):
+    def reverse(self, w, conditions, splits):
         input = w.view(w.shape[0],-1,self.w_size,self.w_size)
   
         # Blocks
@@ -100,5 +103,3 @@ class Glow64x64V0(nn.Module):
             
         return input
         
-    
-    

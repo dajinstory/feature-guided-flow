@@ -13,7 +13,7 @@ from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 from ..common.lit_basemodel import LitBaseModel
-from .glow_64x64_v0 import Glow64x64V0
+from .glow_64x64_v1 import Glow64x64V1
 from .glow_256x256_v0 import Glow256x256V0
 from .vgg_header import get_vgg_header
 from loss import NLLLoss, TripletLoss, MSELoss, L1Loss, PerceptualLoss, IDLoss, GANLoss
@@ -27,7 +27,6 @@ from collections import OrderedDict
 
 import cv2
 
-# NLL + quant_randomness
 class LitKDFlowV0(LitBaseModel):
     def __init__(self,
                  opt: dict,
@@ -38,7 +37,7 @@ class LitKDFlowV0(LitBaseModel):
 
         # network
         flow_nets = {
-            'Glow64x64V0': Glow64x64V0,
+            'Glow64x64V1': Glow64x64V1,
             'Glow256x256V0': Glow256x256V0,
         }
 
@@ -57,7 +56,7 @@ class LitKDFlowV0(LitBaseModel):
             get_vgg_header(6,32,64,3),
             get_vgg_header(12,64,128,3),
             get_vgg_header(24,128,256,3),
-            get_vgg_header(48 if self.in_size>64 else 96,256,512,3),            
+            get_vgg_header(48,256,512,3),            
         )
 
         self.norm_mean = [0.5, 0.5, 0.5]
@@ -83,6 +82,7 @@ class LitKDFlowV0(LitBaseModel):
         self.sampled_images = []
         
         # log
+        self.epoch = 0
         self.save_hyperparameters(ignore=[])
 
         # pretrained
@@ -113,7 +113,7 @@ class LitKDFlowV0(LitBaseModel):
                 vgg_features.append(feature)
 
         # Conditions for affine-coupling layers
-        conditions = [None] * len(self.flow_net.blocks)
+        conditions = [None] * (len(self.flow_net.blocks) + len(self.flow_net.headers))
 
         return im, conditions, vgg_features
 
@@ -160,8 +160,8 @@ class LitKDFlowV0(LitBaseModel):
         # Reverse - Latent to Image
         w_rand = torch.randn_like(w)
         w_rand_temp = w_rand * 0.7
-        splits_random = [torch.randn_like(split) for split in splits[:-1]] + [None]
-        splits_random_temp = [0.7*split for split in splits_random[:-1]] + [None]
+        splits_random = [torch.randn_like(split) if split is not None else None for split in splits]
+        splits_random_temp = [0.7*split if split is not None else None for split in splits_random]
 
         im_recs = self.flow_net.reverse(w, conditions, splits=splits)
         im_recr = self.flow_net.reverse(w, conditions, splits=splits_random)
@@ -221,12 +221,21 @@ class LitKDFlowV0(LitBaseModel):
         self.validation_step(batch, batch_idx)
 
     def validation_epoch_end(self, outputs):
+        # Log Qualative Result - Image
         grid = make_grid(self.sampled_images, nrow=6)
         if isinstance(self.logger, TensorBoardLogger):
             self.logger.experiment.add_image(
                 f'val/visualization',
                 grid, self.global_step+1, dataformats='CHW')
         self.sampled_images = []
+
+        # Update hyper-params if necessary
+        self.epoch += 1
+        if self.epoch % 10 == 0:
+            self.n_bits = min(self.n_bits+1, 8)
+            self.n_bins = 2.0**self.n_bits
+            self.loss_nll.n_bits = self.n_bits
+            self.loss_nll.n_bins = self.n_bins
 
     def test_epoch_end(self, outputs):
         pass
@@ -246,7 +255,6 @@ class LitKDFlowV0(LitBaseModel):
                 eta_min=self.opt['scheduler']['eta_min']),
             'name': 'learning_rate'}
         
-
         return [optimizer], [scheduler]
     
     def _create_loss(self, opt):
@@ -262,5 +270,5 @@ class LitKDFlowV0(LitBaseModel):
         
         self.loss_nll = losses[opt['nll']['type']](**opt['nll']['args'])
         self.loss_fg = losses[opt['feature_guide']['type']](**opt['feature_guide']['args'])
-        self.loss_fg_weights = [1.0, 1.0, 1.0, 1.0]
+        self.loss_fg_weights = [1.0, 0.5, 0.25, 0.125]
        
