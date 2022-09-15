@@ -155,7 +155,7 @@ class LitKDFlowV0(LitBaseModel):
 
         # Forward
         w, log_p, log_det, splits, inter_features = self.flow_net.forward(im, conditions)
-        inter_features = [ vgg_header(inter_feature) for vgg_header, inter_feature in zip(self.vgg_headers, inter_features) ]
+        inter_features = [ vgg_header(inter_feature) for vgg_header, inter_feature in zip(self.vgg_headers, inter_features[:4]) ]
 
         # Reverse - Latent to Image
         w_rand = torch.randn_like(w)
