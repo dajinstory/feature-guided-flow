@@ -1,6 +1,6 @@
-name: kdflow_64x64_celeba
+name: kdflow_64x64_celeba_v0_insightface
 
-gpus: [3] #,1,2,3] #[4,5,6,7]
+gpus: [0] #,1,2,3] #[4,5,6,7]
 seed: 310
 
 n_epochs: 10000
@@ -62,9 +62,14 @@ MODEL:
   pretrained: #/data/dajinhan/models/
   
   flow_net:
-    type: Glow64x64V1
+    type: Glow64x64V0
     args:
       pretrained:
+  
+  kd_module:
+    type: InsightFaceModule
+    args:
+      pretrained: /home/dajinhan/nas_dajinhan/models/ArcFace/model_ir_se50.pth
   
   loss:
     nll:

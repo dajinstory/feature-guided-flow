@@ -1,6 +1,6 @@
-name: glow_64x64_celeba_v0
+name: kdflow_64x64_celeba_v1
 
-gpus: [2] #,1,2,3] #[4,5,6,7]
+gpus: [3] #,1,2,3] #[4,5,6,7]
 seed: 310
 
 n_epochs: 10000
@@ -55,14 +55,14 @@ DATA:
     
     
 MODEL:
-  type: "LitGlowV0"
+  type: "LitKDFlowV1"
   in_size: 64
   gt_size: 64
   n_bits: 8
   pretrained: #/data/dajinhan/models/
   
   flow_net:
-    type: Glow64x64V0
+    type: Glow64x64V1
     args:
       pretrained:
   

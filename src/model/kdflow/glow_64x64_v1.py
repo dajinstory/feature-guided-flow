@@ -31,25 +31,25 @@ class Glow64x64V1(nn.Module):
         # Blocks (3,64,64) -> (96,4,4)
         self.blocks = nn.Sequential(
             Block(squeeze=True, # (12,32,32)
-                  flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=12, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
+                  flow_type='InvConvFlow', n_flows=32, coupling_type= 'SingleAffine', ch_in=12, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
                   split=True),
             Block(squeeze=True, # (24,16,16)
-                  flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=24, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
+                  flow_type='InvConvFlow', n_flows=32, coupling_type= 'SingleAffine', ch_in=24, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
                   split=True),
             Block(squeeze=True, # (48,8,8)
-                  flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=48, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
+                  flow_type='InvConvFlow', n_flows=32, coupling_type= 'SingleAffine', ch_in=48, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
                   split=True),
             Block(squeeze=True, # (96,4,4)
-                  flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=96, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
+                  flow_type='InvConvFlow', n_flows=32, coupling_type= 'SingleAffine', ch_in=96, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
                   split=True),
         )
         # Headers (48,4,4) -> (768,1,1)
         self.headers = nn.Sequential(
             Block(squeeze=True, # (192,2,2)
-                  flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=192, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
+                  flow_type='InvConvFlow', n_flows=16, coupling_type= 'SingleAffine', ch_in=192, ch_c=0, n_chunk=2, subnet=sub_conv(1024,3), clamp=1.0, clamp_activation='GLOW',
                   split=False),
             Block(squeeze=True, # (768,1,1)
-                  flow_type='InvConvFlow', n_flows=48, coupling_type= 'SingleAffine', ch_in=768, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
+                  flow_type='InvConvFlow', n_flows=16, coupling_type= 'SingleAffine', ch_in=768, ch_c=0, n_chunk=2, subnet=sub_conv(1024,3), clamp=1.0, clamp_activation='GLOW',
                   split=False),
         )
 
