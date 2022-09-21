@@ -64,6 +64,8 @@ MODEL:
   flow_net:
     type: Glow64x64V1
     args:
+      inter_temp: 1.0
+      final_temp: 1.0
       pretrained:
   
   loss:

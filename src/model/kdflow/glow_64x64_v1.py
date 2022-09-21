@@ -19,14 +19,14 @@ def sub_conv(ch_hidden, kernel):
                                     ZeroConv2d(ch_hidden, ch_out),)
 
 class Glow64x64V1(nn.Module):
-    def __init__(self, pretrained=None):
+    def __init__(self, pretrained=None, inter_temp=1.0, final_temp=1.0):
         super().__init__()
 
         # configs
         self.img_size = 64
         self.w_size = 1
-        self.inter_temp = 1.0
-        self.final_temp = 1.0
+        self.inter_temp = inter_temp
+        self.final_temp = final_temp
 
         # Blocks (3,64,64) -> (96,4,4)
         self.blocks = nn.Sequential(
