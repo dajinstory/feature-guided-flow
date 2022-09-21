@@ -25,7 +25,7 @@ class Glow64x64V0(nn.Module):
         # configs
         self.img_size = 64
         self.w_size = 4
-        self.inter_temp = 1.0
+        self.inter_temp = 0.1
         self.final_temp = 1.0
 
         # Blocks (3,64,64) -> (96,4,4)

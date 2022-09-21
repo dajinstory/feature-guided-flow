@@ -145,45 +145,57 @@ class LitKDFlowV0(LitBaseModel):
         w, log_p, log_det, splits, inter_features = self.flow_net.forward(im, conditions)
         inter_features = [ kd_header(inter_feature) for kd_header, inter_feature in zip(self.kd_module.headers, inter_features[:3]) ]
 
+        # Reverse_function
+        def compute_im_recon(w, conditions, splits):
+            # Flow.reverse
+            im_rec = self.flow_net.reverse(w, conditions, splits)
+            # Range : (-0.5, 0.5) -> (0,1)
+            im_rec = self.reverse_preprocess(im_rec)
+            # Clamp : (0,1)
+            im_rec = torch.clamp(im_rec, 0, 1)
+            return im_rec
+    
         # Reverse - Latent to Image
-        w_rand = torch.randn_like(w)
-        w_rand_temp = w_rand * 0.7
-        splits_random = [torch.randn_like(split) if split is not None else None for split in splits]
-        splits_random_temp = [0.7*split if split is not None else None for split in splits_random]
+        w_rand =  self.flow_net.final_temp * torch.randn_like(w)
+        w_rand_temp = 0.7 * w_rand
+        splits_rand = [torch.randn_like(split) * self.flow_net.inter_temp if split is not None else None for split in splits]
+        splits_rand_temp = [0.7 * split if split is not None else None for split in splits_rand]
+        splits_zero = [torch.zeros_like(split) if split is not None else None for split in splits]
 
-        im_recs = self.flow_net.reverse(w, conditions, splits=splits)
-        im_recr = self.flow_net.reverse(w, conditions, splits=splits_random)
-        im_recr_temp = self.flow_net.reverse(w, conditions, splits=splits_random_temp)
-        im_gen = self.flow_net.reverse(w_rand, conditions, splits=splits_random)
-        im_gen_temp = self.flow_net.reverse(w_rand_temp, conditions, splits=splits_random_temp)
-        
-        # Format - range (0~1)
+        # RECONS
         im = torch.clamp(self.reverse_preprocess(im), 0, 1)
-        im_recs = torch.clamp(self.reverse_preprocess(im_recs), 0, 1)
-        im_recr = torch.clamp(self.reverse_preprocess(im_recr), 0, 1)
-        im_recr_temp = torch.clamp(self.reverse_preprocess(im_recr_temp), 0, 1)
-        im_gen = torch.clamp(self.reverse_preprocess(im_gen), 0, 1)
-        im_gen_temp = torch.clamp(self.reverse_preprocess(im_gen_temp), 0, 1)
+        im_recs = compute_im_recon(w, conditions, splits)
+        im_recr = compute_im_recon(w, conditions, splits_rand)
+        im_recr_t = compute_im_recon(w, conditions, splits_rand_temp)
+        im_recr_z = compute_im_recon(w, conditions, splits_zero)
+        # GEN-Random
+        im_genr = compute_im_recon(w_rand, conditions, splits_rand)
+        im_gent = compute_im_recon(w_rand_temp, conditions, splits_rand_temp)
+        
         
         # Metric - Image, CHW
         if batch_idx < 10:
             self.sampled_images.append(im[0].cpu())
             self.sampled_images.append(im_recs[0].cpu())
+            
             self.sampled_images.append(im_recr[0].cpu())
-            self.sampled_images.append(im_recr_temp[0].cpu())
-            self.sampled_images.append(im_gen[0].cpu())
-            self.sampled_images.append(im_gen_temp[0].cpu())
+            self.sampled_images.append(im_recr_t[0].cpu())
+            self.sampled_images.append(im_recr_z[0].cpu())
+            
+            self.sampled_images.append(im_genr[0].cpu())
+            self.sampled_images.append(im_gent[0].cpu())
             
         # Metric - PSNR, SSIM
         im = im[0].cpu().numpy().transpose(1,2,0)
-        im_recs = im_recs[0].cpu().numpy().transpose(1,2,0)
         im_recr = im_recr[0].cpu().numpy().transpose(1,2,0)
-        im_recr_temp = im_recr_temp[0].cpu().numpy().transpose(1,2,0)
-        im_gen = im_gen[0].cpu().numpy().transpose(1,2,0)
+        im_recr_t = im_recr_t[0].cpu().numpy().transpose(1,2,0)
+        im_recr_z = im_recr_z[0].cpu().numpy().transpose(1,2,0)
         metric_psnr_r = PSNR(im_recr*255, im*255) 
         metric_ssim_r = SSIM(im_recr*255, im*255)
-        metric_psnr_r_temp = PSNR(im_recr_temp*255, im*255) 
-        metric_ssim_r_temp = SSIM(im_recr_temp*255, im*255)
+        metric_psnr_t = PSNR(im_recr_t*255, im*255) 
+        metric_ssim_t = SSIM(im_recr_t*255, im*255)
+        metric_psnr_z = PSNR(im_recr_z*255, im*255) 
+        metric_ssim_z = SSIM(im_recr_z*255, im*255)
 
         # Metric - Objective Functions
         loss_nll, metric_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
@@ -201,8 +213,10 @@ class LitKDFlowV0(LitBaseModel):
             'val/metric/fg': metric_fg,
             'val/metric/psnr_r': metric_psnr_r,
             'val/metric/ssim_r': metric_ssim_r,
-            'val/metric/psnr_r_temp': metric_psnr_r_temp,
-            'val/metric/ssim_r_temp': metric_ssim_r_temp,}
+            'val/metric/psnr_r_temp': metric_psnr_t,
+            'val/metric/ssim_r_temp': metric_ssim_t,
+            'val/metric/psnr_r_zero': metric_psnr_z,
+            'val/metric/ssim_r_zero': metric_ssim_z,}
         self.log_dict(log_valid)
 
     def test_step(self, batch, batch_idx):
@@ -210,7 +224,7 @@ class LitKDFlowV0(LitBaseModel):
 
     def validation_epoch_end(self, outputs):
         # Log Qualative Result - Image
-        grid = make_grid(self.sampled_images, nrow=6)
+        grid = make_grid(self.sampled_images, nrow=7)
         if isinstance(self.logger, TensorBoardLogger):
             self.logger.experiment.add_image(
                 f'val/visualization',
@@ -257,6 +271,8 @@ class LitKDFlowV0(LitBaseModel):
         
         self.loss_nll = losses[opt['nll']['type']](**opt['nll']['args'])
         self.loss_fg = losses[opt['feature_guide']['type']](**opt['feature_guide']['args'])
-        # self.loss_fg_weights = [10.0, 0.5, 0.1] #[0.5, 0.2, 0.1]#, 0.2]
-        self.loss_fg_weights = [0.1, 0.1, 0.1] #[0.5, 0.2, 0.1]#, 0.2]
+        # self.loss_fg_weights = [10.0, 0.5, 0.1] # vgg16_prior_weights
+        # self.loss_fg_weights = [0.1, 0.1, 0.1] # vgg16
+        self.loss_fg_weights = [100, 100, 100] # insightface
+        
        

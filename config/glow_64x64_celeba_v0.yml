@@ -1,4 +1,4 @@
-name: glow_64x64_celeba_v0
+name: glow_64x64_celeba_v0_intertemp
 
 gpus: [2] #,1,2,3] #[4,5,6,7]
 seed: 310
