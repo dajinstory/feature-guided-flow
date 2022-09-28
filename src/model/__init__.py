@@ -1,7 +1,7 @@
 import torch
 from importlib import import_module
 
-from .kdflow import LitGlowV0, LitKDFlowV0 #, LitKDFlowV1
+from .kdflow import LitGlowV0, LitKDFlowV0, LitKDFlowV1
 
 
 def build_model(opt, is_train=True):
@@ -9,14 +9,14 @@ def build_model(opt, is_train=True):
     models={
         'LitGlowV0': LitGlowV0,
         'LitKDFlowV0': LitKDFlowV0,
-        # 'LitKDFlowV1': LitKDFlowV1,
+        'LitKDFlowV1': LitKDFlowV1,
     }
 
     try: 
         model_type = opt['type']
         if opt['pretrained']:
-            print("Load Checkpoint from ", opt['pretrained'])
-            model = models[model_type].load_from_checkpoint(opt['pretrained'], pretrained=True, strict=False)
+            print("Load Checkpoint from ", opt['pretrained']['ckpt_path'])
+            model = models[model_type].load_from_checkpoint(opt['pretrained']['ckpt_path'], pretrained=True, strict=False)
         else:
             model = models[model_type](opt)
     except:
