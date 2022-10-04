@@ -31,10 +31,14 @@ import cv2
 class LitGlowV0(LitBaseModel):
     def __init__(self,
                  opt: dict,
-                 pretrained=None,
-                 strict_load=True):
+                 pretrained=None):
 
         super().__init__()
+
+        # opt
+        if pretrained is True:
+            opt['flow_net']['args']['pretrained'] = True
+        self.opt = opt
 
         # network
         flow_nets = {

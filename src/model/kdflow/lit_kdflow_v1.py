@@ -31,11 +31,15 @@ import cv2
 class LitKDFlowV1(LitBaseModel):
     def __init__(self,
                  opt: dict,
-                 pretrained=None,
-                 strict_load=True):
+                 pretrained=None):
 
         super().__init__()
 
+        # opt
+        if pretrained is True:
+            opt['flow_net']['args']['pretrained'] = True
+        self.opt = opt
+        
         # network
         flow_nets = {
             'Glow64x64V1': Glow64x64V1,
@@ -115,17 +119,25 @@ class LitKDFlowV1(LitBaseModel):
         w, log_p, log_det, splits, inter_features = self.flow_net.forward(im + quant_randomness, conditions)
         inter_features = [ kd_header(inter_feature) for kd_header, inter_feature in zip(self.kd_module.headers, inter_features[:4]) ]
 
-        # Reverse
-        w_ = w #w.clone().detach()
-        splits_ = [0.7 * torch.randn_like(split) * self.flow_net.inter_temp if split is not None else None for split in splits]
-        # splits_ = [torch.zeros_like(split) if split is not None else None for split in splits]
-        im_rec = self.flow_net.reverse(w_, conditions, splits_)
-        im_rec = self.reverse_preprocess(im_rec)
+        # Reverse_function
+        def compute_im_recon(w, conditions, splits, im):
+            # Flow.reverse
+            im_rec = self.flow_net.reverse(w, conditions, splits)
+            # Range : (-0.5, 0.5) -> (0,1)
+            im_rec = self.reverse_preprocess(im_rec)
+            im = self.reverse_preprocess(im)
+            # Clamp : (0,1)
+            im_rec = torch.clamp(im_rec, 0, 1)
+            im = torch.clamp(im, 0, 1)
+            return im_rec, im
+
+        w_s, conditions_s, splits_s, im_s = self._prepare_self(w, conditions, splits, im)
+        im_rec, im_s = compute_im_recon(w_s, conditions_s, splits_s, im_s)
 
         # Loss
         losses = dict()
         losses['loss_nll'], log_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
-        losses['loss_rec'], log_rec = self.loss_rec(im_rec, im, weight= 0 if self.global_step < 0 else None)
+        losses['loss_rec'], log_rec = self.loss_rec(im_rec, im_s, weight= 0 if self.global_step < 0 else None)
         losses['loss_fg0'], log_fg0 = self.loss_fg(inter_features[0], kd_features[0])#, weight=self.loss_fg_weights[0])
         losses['loss_fg1'], log_fg1 = self.loss_fg(inter_features[1], kd_features[1])#, weight=self.loss_fg_weights[1])
         losses['loss_fg2'], log_fg2 = self.loss_fg(inter_features[2], kd_features[2])#, weight=self.loss_fg_weights[2])
@@ -297,4 +309,10 @@ class LitKDFlowV1(LitBaseModel):
         # self.loss_fg_weights = [0.1, 0.1, 0.1] # vgg16
         # self.loss_fg_weights = [100, 100, 100, 100] # insightface
         
-       
+    def _prepare_self(self, w, conditions, splits, im, stage='train'):
+        w_ = w #w.clone().detach()
+        conditions_ = conditions
+        splits_ = [0.7 * torch.randn_like(split) * self.flow_net.inter_temp if split is not None else None for split in splits]
+        # splits_ = [torch.zeros_like(split) if split is not None else None for split in splits]
+        im_ = im
+        return w_, conditions_, splits_, im_

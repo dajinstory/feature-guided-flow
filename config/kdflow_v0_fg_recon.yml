@@ -1,4 +1,4 @@
-name: kdflow_v1_recon
+name: kdflow_v0_fg_recon
 
 gpus: [0] #,1,2,3] #[4,5,6,7]
 seed: 310
@@ -55,7 +55,7 @@ DATA:
     
     
 MODEL:
-  type: LitKDFlowV1
+  type: LitKDFlowV0
   in_size: 64
   gt_size: 64
   n_bits: 8
@@ -63,14 +63,14 @@ MODEL:
     # ckpt_path: #/data/dajinhan/models/
   
   flow_net:
-    type: Glow64x64V1
+    type: Glow64x64V0
     args:
       inter_temp: 1.0
       final_temp: 1.0
       pretrained:
   
   kd_module:
-    type: InsightFaceModuleV1
+    type: InsightFaceModuleV0
     args:
       pretrained: /home/dajinhan/nas_dajinhan/models/ArcFace/model_ir_se50.pth
   
@@ -87,7 +87,7 @@ MODEL:
     feature_guide:
       type: L1Loss
       args:
-        weight: 0 #20.0
+        weight: 20.0
     
             
   optim:

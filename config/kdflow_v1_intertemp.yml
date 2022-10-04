@@ -87,7 +87,7 @@ MODEL:
     feature_guide:
       type: L1Loss
       args:
-        weight: 0 #1.0
+        weight: 0 #20.0
     
             
   optim:
