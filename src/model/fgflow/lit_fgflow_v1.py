@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 import cv2
 
-class LitfgFlowV1(LitBaseModel):
+class LitFGFlowV1(LitBaseModel):
     def __init__(self,
                  opt: dict,
                  pretrained=None):

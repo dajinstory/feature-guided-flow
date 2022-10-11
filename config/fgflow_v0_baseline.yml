@@ -55,7 +55,7 @@ DATA:
     
     
 MODEL:
-  type: LitfgFlowV0
+  type: LitFGFlowV0
   in_size: 64
   gt_size: 64
   n_bits: 8

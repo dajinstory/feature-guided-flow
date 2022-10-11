@@ -2,6 +2,10 @@
 
 Implementation of "Improved Image Generation of Normalizing Flow with Semantic Feature Guidance" (TBA) in Pytorch
 
+## Architecture
+
+![Overall Architecture](doc/architecture.png)
+
 ## Requirements
 
 - PyTorch 1.7.1
@@ -22,13 +26,7 @@ Also you should edit config files. There are "*_path" named keys. Those keys con
 ### Training Model
 
 You can train model from scratch,
-> bash script/train/train_fgflow_64x64_celeba.sh <br/>
-
-resume from pretrained checkpoints,
-> bash script/resume/train_fgflow_64x64_celeba.sh <br/>
-
-and finetune from pretrained weights
-> bash script/finetune/train_fgflow_64x64_celeba.sh <br/>
+> bash script/train_v0_fg_recon.sh <br/>
 
 ### Demo
 
@@ -38,7 +36,7 @@ If you want to utilize the FGFlow model for your personal research, you just nee
 
 ### Pretrained Checkpoints
 
-I trained 64x64 models on Celeba dataset for ???? iterations. The model followed the setting from GLOW official paper. I got bpd(bits per dimension) about ??,  . I trained 64x64 model with 1 GPU, 16 mini-batch size on each GPU. 
+I trained 64x64 models on CelebA dataset for ???? iterations. The model followed the setting from GLOW official paper. I got bpd(bits per dimension) about ??,  . I trained 64x64 model with 1 GPU, 16 mini-batch size on each GPU. 
 
 |      HParam       |          FGFlow64x64V0          |
 | ----------------- | ----------------------------- |
@@ -58,13 +56,15 @@ I trained 64x64 models on Celeba dataset for ???? iterations. The model followed
 
 ## Samples
 
-![Sample from Celeba, 64x64](doc/sample_64x64_celeba.png)
+![Sample from GLOW](doc/samples_glow.png)
+![Sample from FGFlow](doc/samples_fgflow.png)
 
 Generated samples. Left to right: Results by GLOW and Ours. We can see more details (e.g., hair, expression) in our results than in the GLOW baseline.
 
-![Sample interpolation, 64x64](doc/sample_64x64_interpolation.png)
+![Interpolation Result from GLOW](doc/interpolation_glow.png)
+![Interpolation Result from FGFlow](doc/interpolation_fgflow.png)
 
-Result of z space interpolation.
+Result of z space interpolation. Up to down: Results by GLOW and Ours.
 
 
 ## Reference

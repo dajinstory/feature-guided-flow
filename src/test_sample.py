@@ -5,7 +5,7 @@ import torch
 import torchvision.transforms as T
 from torchvision.utils import make_grid
 from PIL import Image
-from model.fgflow import Glow64x64V0, LitfgFlowV0
+from model.fgflow import Glow64x64V0, LitFGFlowV0
 
 ptt = T.ToTensor()
 ttp = T.ToPILImage()
@@ -23,7 +23,7 @@ def load_glow_baseline(model='glow'):
         lit_ckpt_path = '/data/dajinhan/experiment/fgflow_v0_baseline/checkpoint/last.ckpt'
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/fgflow/result/glow_baseline.ckpt'
 
-        lit_net = LitfgFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
+        lit_net = LitFGFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
         return lit_net.flow_net.eval()
     else:
@@ -38,7 +38,7 @@ def load_glow_intertemp(model='glow'):
         lit_ckpt_path = '/data/dajinhan/experiment/fgflow_v0_intertemp/checkpoint/last.ckpt'
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/fgflow/result/glow_intertemp.ckpt'
 
-        lit_net = LitfgFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
+        lit_net = LitFGFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
         return lit_net.flow_net.eval()
     else:
@@ -52,7 +52,7 @@ def load_glow_recon(model='glow'):
         lit_ckpt_path = '/data/dajinhan/experiment/fgflow_v0_recon/checkpoint/last.ckpt'
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/fgflow/result/glow_recon.ckpt'
 
-        lit_net = LitfgFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
+        lit_net = LitFGFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
         return lit_net.flow_net.eval()
     else:
@@ -66,7 +66,7 @@ def load_glow_featureguidance(model='glow'):
         lit_ckpt_path = '/data/dajinhan/experiment/fgflow_v0_featureguidance/checkpoint/last.ckpt'
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/fgflow/result/glow_featureguidance.ckpt'
 
-        lit_net = LitfgFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
+        lit_net = LitFGFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
         return lit_net.flow_net.eval()
     else:
@@ -80,7 +80,7 @@ def load_glow_fg_recon(model='glow'):
         lit_ckpt_path = '/data/dajinhan/experiment/fgflow_v0_fg_recon/checkpoint/last.ckpt'
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/fgflow/result/glow_fg_recon.ckpt'
 
-        lit_net = LitfgFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
+        lit_net = LitFGFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
         return lit_net.flow_net.eval()
     else:
