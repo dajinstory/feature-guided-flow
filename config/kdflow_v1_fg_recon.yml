@@ -1,4 +1,4 @@
-name: kdflow_64x64_celeba_v0_vgg16
+name: kdflow_v1_fg_recon
 
 gpus: [0] #,1,2,3] #[4,5,6,7]
 seed: 310
@@ -19,8 +19,8 @@ DATA:
     use_rot: false
     use_shuffle: true
     
-    batch_size_per_gpu: 64
-    num_workers: 16
+    batch_size_per_gpu: 16
+    num_workers: 4
     pin_memory: true
   
   valid:
@@ -49,29 +49,30 @@ DATA:
     use_rot: false
     use_shuffle: false
     
-    batch_size_per_gpu: 16
-    num_workers: 4
+    batch_size_per_gpu: 64
+    num_workers: 16
     pin_memory: true
     
     
 MODEL:
-  type: "LitKDFlowV0"
+  type: LitKDFlowV1
   in_size: 64
   gt_size: 64
   n_bits: 8
-  pretrained: #/data/dajinhan/models/
+  pretrained: 
+    # ckpt_path: #/data/dajinhan/models/
   
   flow_net:
-    type: Glow64x64V0
+    type: Glow64x64V1
     args:
       inter_temp: 1.0
       final_temp: 1.0
       pretrained:
   
   kd_module:
-    type: VGG16Module
+    type: InsightFaceModuleV1
     args:
-      pretrained:
+      pretrained: /home/dajinhan/nas_dajinhan/models/ArcFace/model_ir_se50.pth
   
   loss:
     nll:
@@ -79,10 +80,15 @@ MODEL:
       args:
         weight: 1.0
         n_bits: 8
-    feature_guide:
-      type: MSELoss
+    recon:
+      type: L1Loss
       args:
-        weight: 0.1
+        weight: 1.0
+    feature_guide:
+      type: L1Loss
+      args:
+        weight: 20.0
+    
             
   optim:
     type: Adam

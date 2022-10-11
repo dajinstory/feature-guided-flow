@@ -49,6 +49,7 @@ class Glow256x256V0(nn.Module):
                   flow_type='InvConvFlow', n_flows=32, coupling_type= 'SingleAdditive', ch_in=384, ch_c=0, n_chunk=2, subnet=sub_conv(512,3), clamp=1.0, clamp_activation='GLOW',
                   split=False),
         )
+        self.headers = nn.Sequential()
 
         # checkpoint
         if pretrained is None:
@@ -85,12 +86,14 @@ class Glow256x256V0(nn.Module):
         log_p = 0
         log_det = 0  
         splits = []
-        
+        inter_features = []
+
         # Blocks (3,256,256) -> (384,4,4)
         for block, condition in zip(self.blocks, conditions[:len(self.blocks)]):
             output, _log_det, _split = block(output, condition)
             log_det = log_det + _log_det
             splits.append(_split)
+            inter_features.append(output)
 
             if _split is not None:
                 split = _split
@@ -108,7 +111,7 @@ class Glow256x256V0(nn.Module):
         _log_p = gaussian_log_p(z, _m, _log_sd)
         log_p += _log_p.sum(1)
           
-        return w, log_p, log_det, splits
+        return w, log_p, log_det, splits, inter_features
 
     def reverse(self, w, conditions, splits=None):
         input = w.view(w.shape[0],-1,self.w_size,self.w_size)

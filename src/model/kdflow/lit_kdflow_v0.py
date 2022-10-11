@@ -101,6 +101,7 @@ class LitKDFlowV0(LitBaseModel):
 
         # KD Guidance
         kd_features = []
+        self.kd_module.blocks.eval()
         with torch.no_grad():
             feature = self.kd_module.preprocess(im_resized)
             for block in self.kd_module.blocks:

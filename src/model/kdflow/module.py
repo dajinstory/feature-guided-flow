@@ -91,7 +91,7 @@ class InsightFaceModuleV0(nn.Module):
     def __init__(self, pretrained):
         super(InsightFaceModuleV0, self).__init__()
 
-        facenet = Backbone_ID_Loss(input_size=112, num_layers=50, drop_ratio=0.6, mode='ir_se')  
+        facenet = Backbone_ID_Loss(input_size=112, num_layers=50, drop_ratio=0.6, mode='ir_se').eval()
         facenet.load_state_dict(torch.load(pretrained))  
         self.blocks = nn.Sequential(
             nn.Sequential(
@@ -121,7 +121,7 @@ class InsightFaceModuleV1(nn.Module):
     def __init__(self, pretrained):
         super(InsightFaceModuleV1, self).__init__()
 
-        facenet = Backbone_ID_Loss(input_size=112, num_layers=50, drop_ratio=0.6, mode='ir_se')  
+        facenet = Backbone_ID_Loss(input_size=112, num_layers=50, drop_ratio=0.6, mode='ir_se').eval()
         facenet.load_state_dict(torch.load(pretrained))  
         self.blocks = nn.Sequential(
             nn.Sequential(

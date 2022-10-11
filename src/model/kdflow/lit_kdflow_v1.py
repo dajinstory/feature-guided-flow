@@ -39,7 +39,7 @@ class LitKDFlowV1(LitBaseModel):
         if pretrained is True:
             opt['flow_net']['args']['pretrained'] = True
         self.opt = opt
-        
+    
         # network
         flow_nets = {
             'Glow64x64V1': Glow64x64V1,
@@ -49,7 +49,7 @@ class LitKDFlowV1(LitBaseModel):
             'VGG16ModuleV1': VGG16ModuleV1,
             'InsightFaceModuleV1': InsightFaceModuleV1,
         }
-
+        
         self.opt = opt
         self.flow_net = flow_nets[opt['flow_net']['type']](**opt['flow_net']['args'])
         self.in_size = self.opt['in_size']
@@ -102,6 +102,7 @@ class LitKDFlowV1(LitBaseModel):
 
         # KD Guidance
         kd_features = []
+        self.kd_module.blocks.eval()
         with torch.no_grad():
             feature = self.kd_module.preprocess(im_resized)
             for block in self.kd_module.blocks:
@@ -133,7 +134,7 @@ class LitKDFlowV1(LitBaseModel):
 
         w_s, conditions_s, splits_s, im_s = self._prepare_self(w, conditions, splits, im)
         im_rec, im_s = compute_im_recon(w_s, conditions_s, splits_s, im_s)
-
+        
         # Loss
         losses = dict()
         losses['loss_nll'], log_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
@@ -251,7 +252,6 @@ class LitKDFlowV1(LitBaseModel):
             'val/metric/l1_t': metric_l1_t,
             'val/metric/l1_z': metric_l1_z,}
         self.log_dict(log_valid)
-
 
     def test_step(self, batch, batch_idx):
         self.validation_step(batch, batch_idx)

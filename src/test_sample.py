@@ -25,12 +25,13 @@ def load_glow_baseline(model='glow'):
 
         lit_net = LitKDFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
-        return lit_net.flow_net
+        return lit_net.flow_net.eval()
     else:
-        ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/kdflow/result/glow_baseline.ckpt'
+        # ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/kdflow/result/glow_baseline.ckpt'
+        ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/glow/result/glow_64x64_celeba.ckpt'
         pretrained = {'ckpt_path': ckpt_path}
         net = Glow64x64V0(pretrained)
-        return net
+        return net.eval()
 
 def load_glow_intertemp(model='glow'):
     if model=='lit_glow':
@@ -39,12 +40,12 @@ def load_glow_intertemp(model='glow'):
 
         lit_net = LitKDFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
-        return lit_net.flow_net
+        return lit_net.flow_net.eval()
     else:
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/kdflow/result/glow_intertemp.ckpt'
         pretrained = {'ckpt_path': ckpt_path}
         net = Glow64x64V0(pretrained)
-        return net
+        return net.eval()
 
 def load_glow_recon(model='glow'):
     if model=='lit_glow':
@@ -53,12 +54,12 @@ def load_glow_recon(model='glow'):
 
         lit_net = LitKDFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
-        return lit_net.flow_net
+        return lit_net.flow_net.eval()
     else:
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/kdflow/result/glow_recon.ckpt'
         pretrained = {'ckpt_path': ckpt_path}
         net = Glow64x64V0(pretrained)
-        return net
+        return net.eval()
 
 def load_glow_featureguidance(model='glow'):
     if model=='lit_glow':
@@ -67,12 +68,12 @@ def load_glow_featureguidance(model='glow'):
 
         lit_net = LitKDFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
-        return lit_net.flow_net
+        return lit_net.flow_net.eval()
     else:
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/kdflow/result/glow_featureguidance.ckpt'
         pretrained = {'ckpt_path': ckpt_path}
         net = Glow64x64V0(pretrained)
-        return net
+        return net.eval()
 
 def load_glow_fg_recon(model='glow'):
     if model=='lit_glow':
@@ -81,12 +82,12 @@ def load_glow_fg_recon(model='glow'):
 
         lit_net = LitKDFlowV0.load_from_checkpoint(lit_ckpt_path, pretrained=True, strict=False)
         torch.save(lit_net.flow_net.state_dict(), ckpt_path)
-        return lit_net.flow_net
+        return lit_net.flow_net.eval()
     else:
         ckpt_path = '/home/dajinhan/nas_dajinhan/experiments/kdflow/result/glow_fg_recon.ckpt'
         pretrained = {'ckpt_path': ckpt_path}
         net = Glow64x64V0(pretrained)
-        return net
+        return net.eval()
 
 load_models = {
     'baseline': load_glow_baseline,
@@ -108,18 +109,12 @@ reverse_preprocess = T.Normalize(
 
 
 # Sample
-def sample_64(net, n_samples=1, temp=0.7):
-    z_final = temp * torch.randn((n_samples,96,4,4)).cuda() * net.final_temp
-    # z_splits = [
-    #     temp * torch.randn((n_samples,6,32,32)).cuda() * net.inter_temp,
-    #     temp * torch.randn((n_samples,12,16,16)).cuda() * net.inter_temp,
-    #     temp * torch.randn((n_samples,24,8,8)).cuda() * net.inter_temp,
-    #     None,
-    # ]
+def sample_64(net, n_samples=1, final_temp=1.0, inter_temp=0.7):
+    z_final = final_temp * torch.randn((n_samples,96,4,4)).cuda() * net.final_temp
     z_splits = [
-        temp * torch.zeros((n_samples,6,32,32)).cuda() * net.inter_temp,
-        temp * torch.zeros((n_samples,12,16,16)).cuda() * net.inter_temp,
-        temp * torch.zeros((n_samples,24,8,8)).cuda() * net.inter_temp,
+        inter_temp * torch.randn((n_samples,6,32,32)).cuda() * net.inter_temp,
+        inter_temp * torch.randn((n_samples,12,16,16)).cuda() * net.inter_temp,
+        inter_temp * torch.randn((n_samples,24,8,8)).cuda() * net.inter_temp,
         None,
     ]
     conditions = [None] * len(net.blocks)
@@ -205,7 +200,7 @@ n_trains = 30000
 n_gens = 0
 with torch.no_grad():
     while n_gens < n_trains:
-        x_samples = sample_64(net, n_samples=1024, temp=0.7)
+        x_samples = sample_64(net, n_samples=1024, final_temp=1.0, inter_temp=0.7)
         for x_sample in x_samples:
             if n_gens < n_trains:
                 n_gens += 1
