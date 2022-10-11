@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=6 python src/train.py --config config/kdflow_v1_recon.yml
+CUDA_VISIBLE_DEVICES=6 python src/train.py --config config/fgflow_v1_recon.yml

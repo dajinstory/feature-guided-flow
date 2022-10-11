@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=7 python src/train.py --config config/kdflow_v0_featureguidance.yml
+CUDA_VISIBLE_DEVICES=7 python src/train.py --config config/fgflow_v0_featureguidance.yml

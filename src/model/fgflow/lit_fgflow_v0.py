@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 import cv2
 
-class LitKDFlowV1(LitBaseModel):
+class LitFGFlowV0(LitBaseModel):
     def __init__(self,
                  opt: dict,
                  pretrained=None):
@@ -42,12 +42,11 @@ class LitKDFlowV1(LitBaseModel):
     
         # network
         flow_nets = {
-            'Glow64x64V1': Glow64x64V1,
-            'Glow256x256V0': Glow256x256V0,
+            'Glow64x64V0': Glow64x64V0,
         }
-        kd_modules = {
-            'VGG16ModuleV1': VGG16ModuleV1,
-            'InsightFaceModuleV1': InsightFaceModuleV1,
+        fg_modules = {
+            'VGG16ModuleV0': VGG16ModuleV0,
+            'InsightFaceModuleV0': InsightFaceModuleV0,
         }
         
         self.opt = opt
@@ -56,8 +55,8 @@ class LitKDFlowV1(LitBaseModel):
         self.n_bits = self.opt['n_bits']
         self.n_bins = 2.0**self.n_bits
 
-        # self.kd_module = VGG16Module()
-        self.kd_module = kd_modules[opt['kd_module']['type']](**opt['kd_module']['args'])
+        # self.fg_module = VGG16Module()
+        self.fg_module = fg_modules[opt['fg_module']['type']](**opt['fg_module']['args'])
 
         self.norm_mean = [0.5, 0.5, 0.5]
         self.norm_std = [1.0, 1.0, 1.0] #[0.5, 0.5, 0.5]
@@ -94,31 +93,31 @@ class LitKDFlowV1(LitBaseModel):
         im = im / self.n_bins
 
         # Image preprocess
-        im_resized = T.Resize(self.in_size//2, interpolation=InterpolationMode.BICUBIC, antialias=True)(im) if self.kd_module.require_resize else im
+        im_resized = T.Resize(self.in_size//2, interpolation=InterpolationMode.BICUBIC, antialias=True)(im) if self.fg_module.require_resize else im
         im = self.preprocess(im)
 
         # Conditions for affine-coupling layers
         conditions = [None] * (len(self.flow_net.blocks) + len(self.flow_net.headers))
 
-        # KD Guidance
-        kd_features = []
-        self.kd_module.blocks.eval()
+        # fg Guidance
+        fg_features = []
+        self.fg_module.blocks.eval()
         with torch.no_grad():
-            feature = self.kd_module.preprocess(im_resized)
-            for block in self.kd_module.blocks:
+            feature = self.fg_module.preprocess(im_resized)
+            for block in self.fg_module.blocks:
                 feature = block(feature)
-                kd_features.append(feature)
+                fg_features.append(feature)
 
-        return im, conditions, kd_features
+        return im, conditions, fg_features
 
     def training_step(self, batch, batch_idx):
-        im, conditions, kd_features = self.preprocess_batch(batch)
+        im, conditions, fg_features = self.preprocess_batch(batch)
 
         # Forward
         # quant_randomness = torch.zeros_like(im)
         quant_randomness = self.preprocess(torch.rand_like(im)/self.n_bins) - self.preprocess(torch.zeros_like(im)) # x = (0~1)/n_bins, \ (im-m)/s + (x-m)/s - (0-m)/s = (im+x-m)/s
         w, log_p, log_det, splits, inter_features = self.flow_net.forward(im + quant_randomness, conditions)
-        inter_features = [ kd_header(inter_feature) for kd_header, inter_feature in zip(self.kd_module.headers, inter_features[:4]) ]
+        inter_features = [ fg_header(inter_feature) for fg_header, inter_feature in zip(self.fg_module.headers, inter_features[:3]) ]
 
         # Reverse_function
         def compute_im_recon(w, conditions, splits, im):
@@ -139,10 +138,10 @@ class LitKDFlowV1(LitBaseModel):
         losses = dict()
         losses['loss_nll'], log_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
         losses['loss_rec'], log_rec = self.loss_rec(im_rec, im_s, weight= 0 if self.global_step < 0 else None)
-        losses['loss_fg0'], log_fg0 = self.loss_fg(inter_features[0], kd_features[0])#, weight=self.loss_fg_weights[0])
-        losses['loss_fg1'], log_fg1 = self.loss_fg(inter_features[1], kd_features[1])#, weight=self.loss_fg_weights[1])
-        losses['loss_fg2'], log_fg2 = self.loss_fg(inter_features[2], kd_features[2])#, weight=self.loss_fg_weights[2])
-        losses['loss_fg3'], log_fg3 = self.loss_fg(inter_features[3], kd_features[3])#, weight=self.loss_fg_weights[3])
+        losses['loss_fg0'], log_fg0 = self.loss_fg(inter_features[0], fg_features[0])#, weight=self.loss_fg_weights[0])
+        losses['loss_fg1'], log_fg1 = self.loss_fg(inter_features[1], fg_features[1])#, weight=self.loss_fg_weights[1])
+        losses['loss_fg2'], log_fg2 = self.loss_fg(inter_features[2], fg_features[2])#, weight=self.loss_fg_weights[2])
+        # losses['loss_fg3'], log_fg3 = self.loss_fg(inter_features[3], fg_features[3], weight=self.loss_fg_weights[3])
         loss_total_common = sum(losses.values())
         
         log_train = {
@@ -151,7 +150,7 @@ class LitKDFlowV1(LitBaseModel):
             'train/loss_fg0': log_fg0,
             'train/loss_fg1': log_fg1,
             'train/loss_fg2': log_fg2,
-            'train/loss_fg3': log_fg3,
+            # 'train/loss_fg3': log_fg3,
             'train/loss_total_common': loss_total_common,
         }
         
@@ -162,11 +161,11 @@ class LitKDFlowV1(LitBaseModel):
         return loss_total_common
 
     def validation_step(self, batch, batch_idx):
-        im, conditions, kd_features = self.preprocess_batch(batch)
+        im, conditions, fg_features = self.preprocess_batch(batch)
 
         # Forward
         w, log_p, log_det, splits, inter_features = self.flow_net.forward(im, conditions)
-        inter_features = [ kd_header(inter_feature) for kd_header, inter_feature in zip(self.kd_module.headers, inter_features[:4]) ]
+        inter_features = [ fg_header(inter_feature) for fg_header, inter_feature in zip(self.fg_module.headers, inter_features[:3]) ]
 
         # Reverse_function
         def compute_im_recon(w, conditions, splits):
@@ -230,12 +229,12 @@ class LitKDFlowV1(LitBaseModel):
 
         # Metric - Objective Functions
         loss_nll, metric_nll = self.loss_nll(log_p, log_det, n_pixel=3*self.in_size*self.in_size)
-        loss_fg0, metric_fg0 = self.loss_fg(inter_features[0], kd_features[0])#, weight=self.loss_fg_weights[0])
-        loss_fg1, metric_fg1 = self.loss_fg(inter_features[1], kd_features[1])#, weight=self.loss_fg_weights[1])
-        loss_fg2, metric_fg2 = self.loss_fg(inter_features[2], kd_features[2])#, weight=self.loss_fg_weights[2])
-        loss_fg3, metric_fg3 = self.loss_fg(inter_features[3], kd_features[3])#, weight=self.loss_fg_weights[3])
-        loss_fg = loss_fg0 + loss_fg1 + loss_fg2 + loss_fg3
-        metric_fg = metric_fg0 + metric_fg1 + metric_fg2 + metric_fg3
+        loss_fg0, metric_fg0 = self.loss_fg(inter_features[0], fg_features[0])#, weight=self.loss_fg_weights[0])
+        loss_fg1, metric_fg1 = self.loss_fg(inter_features[1], fg_features[1])#, weight=self.loss_fg_weights[1])
+        loss_fg2, metric_fg2 = self.loss_fg(inter_features[2], fg_features[2])#, weight=self.loss_fg_weights[2])
+        # loss_fg3, metric_fg3 = self.loss_fg(inter_features[3], fg_features[3], weight=self.loss_fg_weights[3])
+        loss_fg = loss_fg0 + loss_fg1 + loss_fg2# + loss_fg3
+        metric_fg = metric_fg0 + metric_fg1 + metric_fg2# + metric_fg3
         loss_val = loss_nll + loss_fg
 
         log_valid = {
@@ -276,7 +275,7 @@ class LitKDFlowV1(LitBaseModel):
         pass
 
     def configure_optimizers(self):
-        trainable_parameters = [*self.flow_net.parameters(), *self.kd_module.headers.parameters()]
+        trainable_parameters = [*self.flow_net.parameters(), *self.fg_module.headers.parameters()]
 
         optimizer = Adam(
             trainable_parameters, 

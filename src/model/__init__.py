@@ -1,15 +1,15 @@
 import torch
 from importlib import import_module
 
-from .kdflow import LitGlowV0, LitKDFlowV0, LitKDFlowV1
+from .fgflow import LitGlowV0, LitFGFlowV0, LitFGFlowV1
 
 
 def build_model(opt, is_train=True):
 
     models={
         'LitGlowV0': LitGlowV0,
-        'LitKDFlowV0': LitKDFlowV0,
-        'LitKDFlowV1': LitKDFlowV1,
+        'LitFGFlowV0': LitFGFlowV0,
+        'LitFGFlowV1': LitFGFlowV1,
     }
 
     try: 
