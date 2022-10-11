@@ -8,18 +8,20 @@ Implementation of "Improved Image Generation of Normalizing Flow with Semantic F
 
 ## Requirements
 
-- PyTorch 1.7.1
 - CUDA 11.0
+- Python 3.9
+- PyTorch 1.11
+- others : requirements.txt
 
 > git clone https://github.com/dajinstory/feature-guided-flow.git <br/>
 > cd feature-guided-flow <br/>
-> pip install requirements.txt <br/>
+> pip install -r requirements.txt <br/>
 
 ## Usage
 
 ### Preparing Dataset, Configs
 
-For training, you need to prepare Dataset and meta file. Meta file for Celeba dataset are in data/{DATASET_NAME}/train_meta.csv. It only contains the file name of dataset.
+For training, you need to prepare Dataset and meta file. Meta file for CelebA dataset are in data/{DATASET_NAME}/train_meta.csv. It only contains the file name of dataset.
 
 Also you should edit config files. There are "*_path" named keys. Those keys contains root path of dataset, path of meta file and path to save log and checkpoint files.
 
@@ -51,8 +53,8 @@ I trained 64x64 models on CelebA dataset for ???? iterations. The model followed
 
 |     Model     |   Dataset   |                              Checkpoint                                     |          Note         |
 | ------------- | ----------- | --------------------------------------------------------------------------- | --------------------- |
-| FGFlow64x64V0   | CelebA      | [FGFlow64X64V0_CelebA](TBA)  | 64x64 CelebA Dataset   |
-| FGFlow256x256V0 | CelebA      | TBA  | Official Setting      |
+| FGFlow64x64V0   | CelebA      | [FGFlow64X64V0_CelebA](https://drive.google.com/file/d/1TScbx_tnDlvqaKxczgKhqgLoxzIEbk74/view?usp=sharing)  | 64x64 CelebA Dataset   |
+| FGFlow256x256V0 | CelebA      | [FGFlow256X256V0_CelebA](TBA)  | 256x256 CelebA Dataset      |
 
 ## Samples
 
