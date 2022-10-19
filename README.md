@@ -72,3 +72,12 @@ Result of z space interpolation. Up to down: Results by GLOW and Ours.
 ## Reference
 https://github.com/dajinstory/glow-pytorch <br/>
 
+```
+@software{NF-pytorch,
+  author = {Dajin Han},
+  title = {{Framework for Flow-based Model in Pytorch}},
+  year = {2022},
+  url = {http://github.com/dajinstory/glow-pytorch}
+}
+```
+
