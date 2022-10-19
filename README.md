@@ -1,4 +1,4 @@
-# feature-guided-flow
+# Feature Guided Flow
 
 Implementation of "Improved Image Generation of Normalizing Flow with Semantic Feature Guidance" (TBA) in Pytorch
 
