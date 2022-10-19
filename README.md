@@ -32,9 +32,9 @@ You can train model from scratch,
 
 ### Demo
 
-You can check the sampling result of the pretrained model by running src/demo.ipynb
+You can check the sampling result of the pretrained model by running demo/demo.ipynb
 
-If you want to utilize the FGFlow model for your personal research, you just need to refer to src/demo.ipynb, src/model/ and src/loss.
+If you want to utilize the FGFlow model for your personal research, you just need to refer to src/ folder and demo/ folder.
 
 ### Pretrained Checkpoints
 
