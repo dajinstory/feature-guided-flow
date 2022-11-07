@@ -1,0 +1,105 @@
+name: fgflow_v0_baseline
+
+gpus: [0] #,1,2,3] #[4,5,6,7]
+seed: 310
+
+n_epochs: 10000
+val_check_interval: 1.0 #0.5
+log_every_n_steps: 100 # MAX:609 for 64 batch
+
+experiment_root_path: /data/dajinhan/experiment
+
+DATA:
+  train:
+    type: BaseDataset
+    root_path: /data/dajinhan/datasets/CelebAHQ/resized64x64
+    meta_path: /data/dajinhan/datasets/CelebAHQ/CelebAHQ_train_meta.csv
+    abbreviation: false
+    in_size: 64
+
+    use_hflip: true
+    use_rot: false
+    use_shuffle: true
+    
+    batch_size_per_gpu: 16
+    num_workers: 4
+    pin_memory: true
+  
+  valid:
+    type: BaseDataset
+    root_path: /data/dajinhan/datasets/CelebAHQ/resized64x64
+    meta_path: /data/dajinhan/datasets/CelebAHQ/CelebAHQ_valid_meta.csv
+    abbreviation: false
+    in_size: 64
+    
+    use_hflip: false
+    use_rot: false
+    use_shuffle: false
+    
+    batch_size_per_gpu: 64
+    num_workers: 16
+    pin_memory: true
+  
+  test:
+    type: BaseDataset
+    root_path: /data/dajinhan/datasets/CelebAHQ/resized64x64
+    meta_path: /data/dajinhan/datasets/CelebAHQ/CelebAHQ_valid_meta.csv
+    abbreviation: false
+    in_size: 64
+
+    use_hflip: false
+    use_rot: false
+    use_shuffle: false
+    
+    batch_size_per_gpu: 64
+    num_workers: 16
+    pin_memory: true
+    
+    
+MODEL:
+  type: LitFGFlowV0
+  in_size: 64
+  gt_size: 64
+  n_bits: 8
+  pretrained: 
+    ckpt_path: /home/dajinhan/nas_dajinhan/experiments/fgflow/raw/fgflow_v0_baseline/checkpoint/best-epoch29-loss2.9355.ckpt
+  
+  flow_net:
+    type: Glow64x64V0
+    args:
+      inter_temp: 1.0
+      final_temp: 1.0
+      pretrained:
+  
+  fg_module:
+    type: InsightFaceModuleV0
+    args:
+      pretrained: /home/dajinhan/nas_dajinhan/models/ArcFace/model_ir_se50.pth
+  
+  loss:
+    nll:
+      type: NLLLoss
+      args:
+        weight: 1.0
+        n_bits: 8
+    recon:
+      type: L1Loss
+      args:
+        weight: 0 #1.0
+    feature_guide:
+      type: L1Loss
+      args:
+        weight: 0 #20.0
+    
+            
+  optim:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: CosineAnnealingLR
+    T_max: 30
+    eta_min: !!float 1e-7
+  

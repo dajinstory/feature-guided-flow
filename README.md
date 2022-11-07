@@ -28,7 +28,7 @@ Also you should edit config files. There are "*_path" named keys. Those keys con
 ### Training Model
 
 You can train model from scratch,
-> bash script/train_v0_fg_recon.sh <br/>
+> CUDA_VISIBLE_DEVICES=0 python src/train.py --config config/train/fgflow_v0_fg_recon.yml  <br/>
 
 ### Demo
 

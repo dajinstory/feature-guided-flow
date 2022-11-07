@@ -57,6 +57,7 @@ class LitFGFlowV1(LitBaseModel):
         self.n_bins = 2.0**self.n_bits
 
         # self.fg_module = VGG16Module()
+        # opt['fg_module'] = opt['kd_module']
         self.fg_module = fg_modules[opt['fg_module']['type']](**opt['fg_module']['args'])
 
         self.norm_mean = [0.5, 0.5, 0.5]
@@ -254,6 +255,8 @@ class LitFGFlowV1(LitBaseModel):
         self.log_dict(log_valid)
 
     def test_step(self, batch, batch_idx):
+        # if batch_idx == 0:
+        #     torch.save(self.flow_net.state_dict(), 'fgflow.ckpt')
         self.validation_step(batch, batch_idx)
 
     def validation_epoch_end(self, outputs):
